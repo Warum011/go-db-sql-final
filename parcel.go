@@ -14,11 +14,11 @@ func NewParcelStore(db *sql.DB) ParcelStore {
 
 func (s ParcelStore) Add(p Parcel) (int, error) {
 	// реализуйте добавление строки в таблицу parcel, используйте данные из переменной p
-	res, err := s.db.Exec("INSERT INTO parcel (client, status, address, created_at) VALUES (:client, :status, :address, :createdAt)",
+	res, err := s.db.Exec("INSERT INTO parcel (client, status, address, created_at) VALUES (:client, :status, :address, :created_at)",
 		sql.Named("client", p.Client),
 		sql.Named("status", p.Status),
 		sql.Named("address", p.Address),
-		sql.Named("createdAt", p.CreatedAt))
+		sql.Named("created_at", p.CreatedAt))
 	if err != nil {
 		return 0, err
 	}
@@ -66,6 +66,9 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 		}
 		res = append(res, p)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	return res, nil
 }
@@ -82,18 +85,11 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 func (s ParcelStore) SetAddress(number int, address string) error {
 	// реализуйте обновление адреса в таблице parcel
 	// менять адрес можно только если значение статуса registered
-	var existingStatus string
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number = :number", sql.Named("number", number))
-	err := row.Scan(&existingStatus)
-	if err != nil {
-		return err
-	}
 
-	if existingStatus != ParcelStatusRegistered {
-		return err
-	}
-
-	_, err = s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number", sql.Named("address", address), sql.Named("number", number))
+	_, err := s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number AND status = :registered",
+		sql.Named("address", address),
+		sql.Named("number", number),
+		sql.Named("registered", ParcelStatusRegistered))
 	if err != nil {
 		return err
 	}
